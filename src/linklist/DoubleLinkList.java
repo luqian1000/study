@@ -7,6 +7,7 @@ import java.util.concurrent.LinkedTransferQueue;
 public class DoubleLinkList<E> implements List<E> {
     private Node first;
     private Node last;
+
     private int size;
     private class Node {
         public E element;
