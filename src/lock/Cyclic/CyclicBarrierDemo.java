@@ -10,6 +10,7 @@ public class CyclicBarrierDemo {
         });
         for (int i = 1; i <= 7; i++) {
 //            i
+//            final int temp = i;
             final int temp = i;
             new Thread(() -> {
                 System.out.println(Thread.currentThread().getName() + " \t 收集到第 " + temp + " 颗龙珠 ");
