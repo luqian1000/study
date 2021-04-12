@@ -8,12 +8,16 @@ public interface TreeMyself<E> {
     boolean contains(E e);
     boolean isEmpty();
     boolean remove(E e);
+
+    void clear();
     //前序遍历
     void preOrder();
     //后序遍历
     void postOrder();
     //中序遍历
     void inorderTraversal();
+    //层序遍历
+    void levelOrder();
 
 
 }
