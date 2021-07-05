@@ -1,5 +1,8 @@
 package stack;
 
+import tree.TreeMyselfImpl;
+import tree.TreeMyselfImpl2;
+
 import java.util.ArrayList;
 
 public class StackMyselfImpl<E> implements StackMyself<E>{

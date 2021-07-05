@@ -1,27 +1,82 @@
 package tree;
 
+import tree.printer.BinaryTreeInfo;
+import tree.printer.BinaryTrees;
+
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
-import java.util.TreeSet;
+import java.util.TreeMap;
 
 /**
  * 二叉搜索树
  * @param <E>
  */
-public class TreeMyselfImpl<E> implements TreeMyself<E> {
+public class BlanceTreeMyselfImpl<E> implements TreeMyself<E> , BinaryTreeInfo {
     private int size;
     private Node root;
+
+    @Override
+    public Object root() {
+        return root;
+    }
+
+    @Override
+    public Object left(Object node) {
+        return ((Node)node).left;
+    }
+
+    @Override
+    public Object right(Object node) {
+        return ((Node)node).right;
+    }
+
+    @Override
+    public Object string(Object node) {
+        return ((Node)node).e;
+    }
 
     class Node<E> {
         E e;
         Node<E> left;
         Node<E> right;
         Node<E> parent;
-
+        int height=1;
+        public boolean isLeftNode(){
+            return parent!=null&&parent.left==this;
+        }
+        public boolean isRightNode(){
+            return parent!=null&&parent.right==this;
+        }
         public Node(Node parent, E e) {
             this.parent = parent;
             this.e = e;
+        }
+
+        public boolean isBlance() {
+
+            int leftHeight=left==null?0:left.height;
+            int rightHeight=right==null?0:right.height;
+            int abs = Math.abs(leftHeight - rightHeight);
+            if (abs==1||abs==0){
+                return true;
+            }
+            return false;
+        }
+
+        public boolean isLeftChild(){ // 判断自己是不是左子树
+            return parent!=null && this==parent.left;
+        }
+        public boolean isRightChild(){ // 判断自己是不是右子树
+            return parent!=null && this==parent.right;
+        }
+        public Node<E> tallerChild() {
+            int leftHeight = left == null ? 0 : ((Node<E>) left).height;
+            int rightHeight = right == null ? 0 : ((Node<E>) right).height;
+            if (leftHeight > rightHeight) return left;
+            if (rightHeight > leftHeight) return right;
+            // 高度一样则返回同方向的，左子节点则返回左，否则返回右
+            return isLeftChild() ? left : right;
         }
     }
 
@@ -30,18 +85,52 @@ public class TreeMyselfImpl<E> implements TreeMyself<E> {
         return size;
     }
 
+
+    public void leftHanded(Node<E> grand){
+        Node<E> parent=grand.right;
+        Node<E> child = parent.left;
+        grand.right=child;
+        parent.left=grand;
+        afterRote(grand,parent,child);
+    }
+
+
+    private void afterRote(Node<E> grand, Node<E> parent, Node<E> child) {
+        parent.parent=grand.parent;
+        if (grand.isLeftNode()){
+            grand.parent.left=parent;
+        }else if (grand.isRightNode()){
+            grand.parent.right=parent;
+        }else {
+            root=parent;
+        }
+        if (child!=null){
+            child.parent=grand;
+        }
+        grand.parent=parent;
+        updateHeight(grand);
+        updateHeight(parent);
+    }
+
+    private void updateHeight(Node<E> node) {
+        int leftHeight=node.left==null?0:node.left.height;
+        int rightHeight=node.right==null?0:node.right.height;
+        node.height=1+Math.max(leftHeight,rightHeight);
+
+    }
+
     @Override
     public boolean add(E e) {
         if (e == null) {
             return false;
         }
         if (root == null) {
-            Node newNode = new Node(null, e);
+            BlanceTreeMyselfImpl.Node newNode = new BlanceTreeMyselfImpl.Node(null, e);
             root = newNode;
             size++;
         } else {
-            Node parentNode = null;
-            Node addLocation = root;
+            BlanceTreeMyselfImpl.Node parentNode = null;
+            BlanceTreeMyselfImpl.Node addLocation = root;
             int compareResult = 0;
             while (addLocation != null) {
                 parentNode = addLocation;
@@ -55,14 +144,50 @@ public class TreeMyselfImpl<E> implements TreeMyself<E> {
                     return true;
                 }
             }
+            Node newNode = new Node(parentNode, e);
+
             if (compareResult > 0) {
-                parentNode.left = new Node(parentNode, e);
+                parentNode.left = newNode;
             } else if (compareResult < 0) {
-                parentNode.right = new Node(parentNode, e);
+                parentNode.right = newNode;
             }
             size++;
+            afterAdd(newNode);
         }
         return true;
+    }
+
+    private void afterAdd(Node newNode) {
+        while ((newNode=newNode.parent)!=null){
+            if (newNode.isBlance()){
+                updateHeight(newNode);
+            }else {
+                reBalance(newNode);
+            }
+        }
+    }
+
+    private void reBalance(Node grand) {
+
+        Node<E> parent = ((Node<E>) grand).tallerChild();
+        Node<E> node = ((Node<E>) parent).tallerChild();
+        if (parent.isLeftChild()) {//L
+            if (node.isLeftChild()) {//LL
+//                right(grand);//LL则右旋
+            } else {//LR
+                //LR时先左旋平衡父节点，
+//                rotateLeft(parent);
+                //再右旋祖先节点平衡整棵树
+//                rotateRight(grand);
+            }
+        } else {//R
+            if (node.isLeftChild()) {//RL
+//                rotateRight(parent);
+//                rotateLeft(grand);
+            } else {//RR
+                leftHanded(grand);//RR则左旋
+            }
+        }
     }
 
     @Override
@@ -96,49 +221,10 @@ public class TreeMyselfImpl<E> implements TreeMyself<E> {
     @Override
     public boolean remove(E e) {
         remove(node(e));
-
         return true;
     }
 
     private void remove(Node<E> node) {
-        if (node == null) {
-            return;
-        }
-        //移除度为二的节点  注意⚠️：这里有一个地方需要特别注意，当移除度为2的节点a时势必要有一个节点来接替这个位置，
-        // 所以这个地方一个重要的思路是
-        //不删除该度为2的节点a，而是找到该节点的前驱或后继（中序遍历的结果）节点b的值覆盖掉该度为2的节点a的值
-        //之后再将节点b（度只能1或0）的节点删除
-        if (node.left != null && node.right != null) {
-            Node<E> successor = successor(node);
-            //用后继节点的值代替要删除的度为2的节点的值
-            node.e = successor.e;
-            //将后继节点赋给node继续下面的逻辑删除后继节点，后继节点度必定为1或0
-            node = successor;
-        }
-        if (node.parent == null) {
-            root = null;
-        } else if (node.right != null || node.left != null) {
-            if (node.right != null) {
-                if (node.parent.left == node) {
-                    node.parent.left = node.right;
-                } else {
-                    node.parent.right = node.right;
-                }
-            } else {
-                if (node.parent.left == node) {
-                    node.parent.left = node.left;
-                } else {
-                    node.parent.right = node.left;
-                }
-            }
-        } else {
-            if (node.parent.left == node) {
-                node.parent.left = null;
-            } else {
-                node.parent.right = null;
-            }
-        }
-        size--;
     }
 
     private Node<E> successor(Node<E> node) {
@@ -293,7 +379,7 @@ public class TreeMyselfImpl<E> implements TreeMyself<E> {
         queue.offer(nodeRoot);
         while (!queue.isEmpty()) {
             Node poll = queue.poll();
-            System.out.println(poll.e);
+            System.out.println(poll.e+"高度："+poll.height);
             if (poll.left != null) {
                 queue.offer(poll.left);
             }
@@ -313,39 +399,35 @@ public class TreeMyselfImpl<E> implements TreeMyself<E> {
 
     public static void main(String[] args) {
 
-//        TreeSet
-        TreeMyselfImpl<Integer> treeMyself = new TreeMyselfImpl<>();
-        treeMyself.add(2);
-        treeMyself.add(5);
-        treeMyself.add(3);
-        treeMyself.add(8);
-        treeMyself.add(1);
+        BlanceTreeMyselfImpl<Integer> treeMyself = new BlanceTreeMyselfImpl<>();
+        treeMyself.add(11);
         treeMyself.add(9);
-        treeMyself.add(15);
+        treeMyself.add(13);
         treeMyself.add(12);
+        treeMyself.add(15);
+        treeMyself.add(19);
+
         System.out.println(treeMyself);
         System.out.println(treeMyself.contains(3));
         System.out.println(treeMyself.contains(4));
         //2538
-        treeMyself.preOrder();
-        System.out.println("上面前序-------");
-        //3852
-        treeMyself.postOrder();
-        System.out.println("上面后序-------");
-        //2358
-        treeMyself.inorderTraversal();
-        System.out.println("上面中序-------");
-        //21538
+//        treeMyself.preOrder();
+//        System.out.println("上面前序-------");
+//        //3852
+//        treeMyself.postOrder();
+//        System.out.println("上面后序-------");
+//        //2358
+//        treeMyself.inorderTraversal();
+//        System.out.println("上面中序-------");
+//        //21538
+//        treeMyself.levelOrder();
+//        System.out.println("上面层序-------");
+        BinaryTrees.print(treeMyself);
+        System.out.println();
+//        treeMyself.leftHanded();
         treeMyself.levelOrder();
         System.out.println("上面层序-------");
-        treeMyself.remove(9);
-        treeMyself.levelOrder();
-//        TreeMyselfImpl<String> test=new TreeMyselfImpl<>();
-//        test
-        //2
-        //2
-//        35
-        //2
-
+        BinaryTrees.print(treeMyself);
+//        TreeMap
     }
 }
